@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/sv-demo-night/static/css/main.dda003d7.css",
-    "main.js": "/sv-demo-night/static/js/main.eb8e651a.js",
-    "index.html": "/sv-demo-night/index.html",
-    "main.dda003d7.css.map": "/sv-demo-night/static/css/main.dda003d7.css.map",
-    "main.eb8e651a.js.map": "/sv-demo-night/static/js/main.eb8e651a.js.map"
+    "main.css": "/static/css/main.dda003d7.css",
+    "main.js": "/static/js/main.56ee0acd.js",
+    "index.html": "/index.html",
+    "main.dda003d7.css.map": "/static/css/main.dda003d7.css.map",
+    "main.56ee0acd.js.map": "/static/js/main.56ee0acd.js.map"
   },
   "entrypoints": [
     "static/css/main.dda003d7.css",
-    "static/js/main.eb8e651a.js"
+    "static/js/main.56ee0acd.js"
   ]
 }

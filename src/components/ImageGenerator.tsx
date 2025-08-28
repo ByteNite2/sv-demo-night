@@ -13,9 +13,6 @@ const ImageGenerator: React.FC = () => {
     const [loadingStatus, setLoadingStatus] = useState('');
     const [debugInfo, setDebugInfo] = useState<string>('');
 
-    // Check if we're using CORS proxy
-    const isUsingProxy = window.location.hostname === 'bytenite2.github.io';
-
     const handleGenerate = async () => {
         if (!prompt.trim()) {
             setError('Please enter a prompt');
@@ -48,16 +45,34 @@ const ImageGenerator: React.FC = () => {
             await runJob(accessToken, jobId);
             setDebugInfo(prev => prev + '\n✅ Job started successfully');
             
-            setLoadingStatus('Generating images...');
-            const results = await pollResults(accessToken, jobId);
+            setLoadingStatus('Generating images... This may take 1-2 minutes');
+            setDebugInfo(prev => prev + '\n🔄 Polling for results (this is normal, please wait)...');
+            
+            const results = await pollResults(accessToken, jobId, (attempt, maxAttempts) => {
+                setLoadingStatus(`Generating images... Checking progress (${attempt}/${maxAttempts})`);
+                
+                // Update debug info every 10 attempts to avoid spam
+                if (attempt % 10 === 0) {
+                    setDebugInfo(prev => prev + `\n🔄 Still generating... attempt ${attempt}/${maxAttempts}`);
+                }
+            });
 
             if (results && results.length > 0) {
-                // For now, we'll just use the download links directly
-                // In a real implementation, you'd download and extract the zip
-                const imageLinks = results.map((result: any) => result.link);
-                setImages(imageLinks);
-                setLoadingStatus('');
-                setDebugInfo(prev => prev + `\n✅ Generation complete! Got ${imageLinks.length} results`);
+                setLoadingStatus('Downloading and extracting images...');
+                setDebugInfo(prev => prev + `\n✅ Got ${results.length} result(s), extracting image URLs...`);
+                
+                // Extract image URLs directly from results
+                const imageUrls = results.map((result: any) => result.url || result.link).filter((url: string) => url);
+                setDebugInfo(prev => prev + `\nImage URLs: ${imageUrls.join(', ')}`);
+                
+                if (imageUrls.length > 0) {
+                    setImages(imageUrls);
+                    setLoadingStatus('');
+                    setDebugInfo(prev => prev + `\n✅ Successfully received ${imageUrls.length} image(s)!`);
+                } else {
+                    setError('No image URLs found in the results');
+                    setDebugInfo(prev => prev + '\n❌ No image URLs found in results');
+                }
             } else {
                 setError('No results found');
                 setDebugInfo(prev => prev + '\n❌ No results found');
@@ -75,14 +90,6 @@ const ImageGenerator: React.FC = () => {
 
     return (
         <div className="image-generator">
-            {isUsingProxy && (
-                <div className="cors-warning">
-                    <p><strong>⚠️ Demo Mode:</strong> This app uses CORS proxies for demonstration purposes. 
-                    If one proxy fails, it will automatically try others. 
-                    For production use, ByteNite API should be configured to allow your domain.</p>
-                </div>
-            )}
-            
             <div className="form-container">
                 <div className="input-group">
                     <label htmlFor="prompt">Prompt:</label>

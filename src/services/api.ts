@@ -1,186 +1,140 @@
 import axios from 'axios';
 import { AccessTokenResponse, CreateJobResponse, JobResultsResponse } from '../types';
 
-const BASE_URL = 'https://api.bytenite.com/v1';
-
-// Multiple CORS proxy options
-const CORS_PROXIES = [
-    'https://api.allorigins.win/raw?url=',
-    'https://thingproxy.freeboard.io/fetch/',
-    'https://proxy.cors.sh/',
-    'https://cors-anywhere.herokuapp.com/'
-];
-
-let currentProxyIndex = 0;
-
-// For demo purposes, we'll use a CORS proxy
-// In production, the ByteNite API should be configured to allow your domain
-const getProxiedUrl = (url: string) => {
-    // Only use proxy if we're in production (GitHub Pages)
-    if (window.location.hostname === 'bytenite2.github.io') {
-        const proxy = CORS_PROXIES[currentProxyIndex];
-        return `${proxy}${encodeURIComponent(url)}`;
-    }
-    return url;
-};
-
-const tryNextProxy = () => {
-    currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+// Use Vercel API routes (will be /api/* when deployed)
+const getApiBase = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3000/api';
+  }
+  return '/api';
 };
 
 export const fetchAccessToken = async (apiKey: string): Promise<string> => {
-    const maxRetries = CORS_PROXIES.length;
-    let lastError: any;
-
-    // Clean and validate API key
-    const cleanApiKey = apiKey.trim();
-    if (!cleanApiKey) {
-        throw new Error('API key is required');
-    }
-
-    console.log('Attempting authentication with API key length:', cleanApiKey.length);
-    console.log('API key starts with:', cleanApiKey.substring(0, 8) + '...');
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-            console.log(`Attempt ${attempt + 1} using proxy: ${CORS_PROXIES[currentProxyIndex]}`);
-            
-            const requestPayload = { apiKey: cleanApiKey };
-            console.log('Request payload:', requestPayload);
-            
-            const response = await axios.post<AccessTokenResponse>(
-                getProxiedUrl(`${BASE_URL}/auth/access_token`), 
-                requestPayload,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    timeout: 10000 // 10 second timeout
-                }
-            );
-            
-            console.log('Authentication successful!');
-            return response.data.token;
-        } catch (error: any) {
-            console.error(`Auth error with proxy ${CORS_PROXIES[currentProxyIndex]}:`, {
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message
-            });
-            lastError = error;
-            
-            // If this isn't the last attempt, try next proxy
-            if (attempt < maxRetries - 1) {
-                tryNextProxy();
-                console.log(`Trying next proxy: ${CORS_PROXIES[currentProxyIndex]}`);
-                continue;
-            }
-        }
+  try {
+    console.log('Calling Vercel auth API...');
+    
+    const response = await axios.post<AccessTokenResponse>(`${getApiBase()}/auth`, {
+      apiKey: apiKey.trim()
+    });
+    
+    console.log('Authentication successful!');
+    return response.data.token;
+  } catch (error: any) {
+    console.error('Auth error:', error);
+    
+    // Better error message extraction
+    let errorMessage = 'Unknown error';
+    if (error.response?.data) {
+      if (typeof error.response.data.error === 'string') {
+        errorMessage = error.response.data.error;
+      } else if (typeof error.response.data.details === 'string') {
+        errorMessage = error.response.data.details;
+      } else if (typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      } else {
+        errorMessage = JSON.stringify(error.response.data);
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
     }
     
-    // If all proxies failed, throw the last error with more details
-    const errorMessage = lastError.response?.data?.message || lastError.message;
-    const errorDetails = lastError.response?.data || {};
-    throw new Error(`Authentication failed with all CORS proxies. Error: ${errorMessage}. Details: ${JSON.stringify(errorDetails)}`);
+    throw new Error(`Authentication failed: ${errorMessage}`);
+  }
 };
 
 export const createJob = async (accessToken: string, prompt: string, numReplicas: number): Promise<CreateJobResponse> => {
-    try {
-        const response = await axios.post<CreateJobResponse>(
-            getProxiedUrl(`${BASE_URL}/customer/jobs`), 
-            {
-                templateId: "img-gen-diffusers-flux-gpu-template",
-                description: "This job generates variations of images out of the same prompt using Flux Schnell.",
-                name: "Job with img-gen-diffusers-flux-gpu-template",
-                params: {
-                    partitioner: {
-                        num_replicas: numReplicas
-                    },
-                    assembler: {},
-                    app: {
-                        prompt: prompt
-                    }
-                }
-            }, 
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': accessToken
-                },
-                timeout: 15000 // 15 second timeout
-            }
-        );
-        return response.data;
-    } catch (error: any) {
-        console.error('Job creation error:', error);
-        throw new Error(`Job creation failed: ${error.response?.data?.message || error.message}`);
-    }
+  try {
+    console.log('Creating job via Vercel API...');
+    
+    const response = await axios.post<CreateJobResponse>(`${getApiBase()}/create-job`, {
+      accessToken,
+      prompt,
+      numReplicas
+    });
+    
+    console.log('Job created successfully!');
+    return response.data;
+  } catch (error: any) {
+    console.error('Job creation error:', error);
+    const errorMessage = error.response?.data?.error || error.message;
+    throw new Error(`Job creation failed: ${errorMessage}`);
+  }
 };
 
 export const runJob = async (accessToken: string, jobId: string): Promise<void> => {
-    try {
-        await axios.post(
-            getProxiedUrl(`${BASE_URL}/customer/jobs/${jobId}/run`), 
-            {
-                config: {
-                    taskTimeout: "3600",
-                    jobTimeout: "84200",
-                    isTestJob: false
-                }
-            }, 
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': accessToken
-                },
-                timeout: 15000 // 15 second timeout
-            }
-        );
-        
-        // Wait 1 second before polling as specified in requirements
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error: any) {
-        console.error('Job run error:', error);
-        throw new Error(`Job execution failed: ${error.response?.data?.message || error.message}`);
-    }
+  try {
+    console.log('Running job via Vercel API...');
+    
+    await axios.post(`${getApiBase()}/run-job`, {
+      accessToken,
+      jobId
+    });
+    
+    console.log('Job started successfully!');
+    
+    // Wait 1 second before polling as specified in requirements
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  } catch (error: any) {
+    console.error('Job run error:', error);
+    const errorMessage = error.response?.data?.error || error.message;
+    throw new Error(`Job execution failed: ${errorMessage}`);
+  }
 };
 
-export const pollResults = async (accessToken: string, jobId: string): Promise<JobResultsResponse['results']> => {
-    const maxAttempts = 120; // 2 minutes max polling
-    let attempts = 0;
+export const pollResults = async (
+  accessToken: string, 
+  jobId: string, 
+  onProgress?: (attempt: number, maxAttempts: number) => void
+): Promise<JobResultsResponse['results']> => {
+  const maxAttempts = 120; // 2 minutes max polling
+  let attempts = 0;
 
-    while (attempts < maxAttempts) {
-        try {
-            const response = await axios.get<JobResultsResponse>(
-                getProxiedUrl(`${BASE_URL}/customer/jobs/${jobId}/results`), 
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': accessToken
-                    },
-                    timeout: 10000 // 10 second timeout
-                }
-            );
-            
-            if (response.data.results && response.data.results.length > 0) {
-                return response.data.results;
-            }
-        } catch (error: any) {
-            console.error(`Polling attempt ${attempts + 1} failed:`, error);
-            // If it's a 404 or similar, the job might not be ready yet
-            if (error.response?.status !== 404) {
-                throw new Error(`Polling failed: ${error.response?.data?.message || error.message}`);
-            }
-        }
-        
-        // Wait 1 second before next poll
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        attempts++;
+  console.log(`Starting to poll for job results: ${jobId}`);
+
+  while (attempts < maxAttempts) {
+    try {
+      if (onProgress) {
+        onProgress(attempts + 1, maxAttempts);
+      }
+      
+      const response = await axios.get<JobResultsResponse>(
+        `${getApiBase()}/get-results?accessToken=${encodeURIComponent(accessToken)}&jobId=${encodeURIComponent(jobId)}`
+      );
+      
+      if (response.data.results && response.data.results.length > 0) {
+        console.log(`✅ Job completed! Found ${response.data.results.length} results`);
+        return response.data.results;
+      }
+      
+      console.log('Job not yet complete, continuing to poll...');
+      
+    } catch (error: any) {
+      const status = error.response?.status;
+      const message = error.response?.data?.error || error.message;
+      
+      console.log(`Polling attempt ${attempts + 1} - Status: ${status}, Message: ${message}`);
+      
+      // These are expected responses while job is running - not errors
+      if (
+        status === 404 || // Job not found yet
+        status === 400 || // Bad request (job not ready)
+        status === 500 || // Internal server error (job still processing)
+        status === 202 || // Accepted (job still processing)
+        message?.includes('not yet been completed') ||
+        message?.includes('job has not yet been completed') ||
+        message?.includes('still processing') ||
+        message?.includes('Internal Server Error')
+      ) {
+        console.log('Job still processing, continuing to poll...');
+      } else {
+        console.error(`Unexpected error during polling:`, error);
+        throw new Error(`Polling failed with unexpected error: ${message} (Status: ${status})`);
+      }
     }
     
-    throw new Error('Job results not available after polling timeout');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    attempts++;
+  }
+  
+  throw new Error(`Job results not available after ${maxAttempts} seconds of polling. The job may still be processing.`);
 };
