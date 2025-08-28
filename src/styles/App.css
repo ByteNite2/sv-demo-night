@@ -51,6 +51,32 @@ header p {
     margin: 0;
 }
 
+.debug-panel {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.debug-panel h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.debug-panel pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #495057;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 .form-container {
     margin-bottom: 30px;
 }
@@ -64,6 +90,14 @@ header p {
     margin-bottom: 8px;
     font-weight: 600;
     color: #333;
+}
+
+.api-key-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
 }
 
 .input-field, .select-field {

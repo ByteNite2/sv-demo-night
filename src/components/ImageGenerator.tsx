@@ -11,6 +11,7 @@ const ImageGenerator: React.FC = () => {
     const [images, setImages] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [loadingStatus, setLoadingStatus] = useState('');
+    const [debugInfo, setDebugInfo] = useState<string>('');
 
     // Check if we're using CORS proxy
     const isUsingProxy = window.location.hostname === 'bytenite2.github.io';
@@ -25,20 +26,27 @@ const ImageGenerator: React.FC = () => {
             return;
         }
 
+        // Clear debug info and show API key info
+        setDebugInfo(`API Key info: Length=${apiKey.length}, Starts with: ${apiKey.substring(0, 8)}...`);
+
         setLoading(true);
         setError(null);
         setImages([]);
 
         try {
             setLoadingStatus('Authenticating...');
+            setDebugInfo(prev => prev + '\nAttempting authentication...');
             const accessToken = await fetchAccessToken(apiKey);
+            setDebugInfo(prev => prev + '\n✅ Authentication successful!');
             
             setLoadingStatus('Creating job...');
             const jobData = await createJob(accessToken, prompt, numReplicas);
             const jobId = jobData.job.id;
+            setDebugInfo(prev => prev + `\n✅ Job created with ID: ${jobId}`);
 
             setLoadingStatus('Starting generation...');
             await runJob(accessToken, jobId);
+            setDebugInfo(prev => prev + '\n✅ Job started successfully');
             
             setLoadingStatus('Generating images...');
             const results = await pollResults(accessToken, jobId);
@@ -49,12 +57,16 @@ const ImageGenerator: React.FC = () => {
                 const imageLinks = results.map((result: any) => result.link);
                 setImages(imageLinks);
                 setLoadingStatus('');
+                setDebugInfo(prev => prev + `\n✅ Generation complete! Got ${imageLinks.length} results`);
             } else {
                 setError('No results found');
+                setDebugInfo(prev => prev + '\n❌ No results found');
             }
         } catch (err: any) {
             console.error('Error generating images:', err);
-            setError(err.response?.data?.message || 'An error occurred while generating images.');
+            const errorMsg = err.message || 'An error occurred while generating images.';
+            setError(errorMsg);
+            setDebugInfo(prev => prev + `\n❌ Error: ${errorMsg}`);
         } finally {
             setLoading(false);
             setLoadingStatus('');
@@ -110,6 +122,10 @@ const ImageGenerator: React.FC = () => {
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
                     />
+                    <small className="api-key-hint">
+                        Tip: Make sure to copy the entire API key without any extra spaces.
+                        API keys are usually long strings (50+ characters).
+                    </small>
                 </div>
                 
                 <button 
@@ -120,6 +136,13 @@ const ImageGenerator: React.FC = () => {
                     {loading ? 'Generating...' : 'Generate Images'}
                 </button>
             </div>
+
+            {debugInfo && (
+                <div className="debug-panel">
+                    <h4>Debug Information:</h4>
+                    <pre>{debugInfo}</pre>
+                </div>
+            )}
 
             {loading && <LoadingSpinner status={loadingStatus} />}
             {error && <div className="error-message">{error}</div>}

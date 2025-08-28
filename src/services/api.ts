@@ -32,13 +32,25 @@ export const fetchAccessToken = async (apiKey: string): Promise<string> => {
     const maxRetries = CORS_PROXIES.length;
     let lastError: any;
 
+    // Clean and validate API key
+    const cleanApiKey = apiKey.trim();
+    if (!cleanApiKey) {
+        throw new Error('API key is required');
+    }
+
+    console.log('Attempting authentication with API key length:', cleanApiKey.length);
+    console.log('API key starts with:', cleanApiKey.substring(0, 8) + '...');
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
+            console.log(`Attempt ${attempt + 1} using proxy: ${CORS_PROXIES[currentProxyIndex]}`);
+            
+            const requestPayload = { apiKey: cleanApiKey };
+            console.log('Request payload:', requestPayload);
+            
             const response = await axios.post<AccessTokenResponse>(
                 getProxiedUrl(`${BASE_URL}/auth/access_token`), 
-                {
-                    apiKey: apiKey
-                }, 
+                requestPayload,
                 {
                     headers: {
                         'Content-Type': 'application/json',
@@ -47,9 +59,16 @@ export const fetchAccessToken = async (apiKey: string): Promise<string> => {
                     timeout: 10000 // 10 second timeout
                 }
             );
+            
+            console.log('Authentication successful!');
             return response.data.token;
         } catch (error: any) {
-            console.error(`Auth error with proxy ${CORS_PROXIES[currentProxyIndex]}:`, error);
+            console.error(`Auth error with proxy ${CORS_PROXIES[currentProxyIndex]}:`, {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message
+            });
             lastError = error;
             
             // If this isn't the last attempt, try next proxy
@@ -61,8 +80,10 @@ export const fetchAccessToken = async (apiKey: string): Promise<string> => {
         }
     }
     
-    // If all proxies failed, throw the last error
-    throw new Error(`Authentication failed with all CORS proxies. Last error: ${lastError.response?.data?.message || lastError.message}`);
+    // If all proxies failed, throw the last error with more details
+    const errorMessage = lastError.response?.data?.message || lastError.message;
+    const errorDetails = lastError.response?.data || {};
+    throw new Error(`Authentication failed with all CORS proxies. Error: ${errorMessage}. Details: ${JSON.stringify(errorDetails)}`);
 };
 
 export const createJob = async (accessToken: string, prompt: string, numReplicas: number): Promise<CreateJobResponse> => {
