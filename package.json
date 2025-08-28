@@ -1,0 +1,30 @@
+{
+  "name": "sv-demo-night",
+  "version": "1.0.0",
+  "description": "A simple UI app for generating images based on user prompts using ByteNite.",
+  "main": "src/index.tsx",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3",
+    "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.1.2",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0"
+  },
+  "keywords": [
+    "image generation",
+    "byteNite",
+    "react"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
