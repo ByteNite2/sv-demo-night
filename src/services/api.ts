@@ -2,60 +2,98 @@ import axios from 'axios';
 import { AccessTokenResponse, CreateJobResponse, JobResultsResponse } from '../types';
 
 const BASE_URL = 'https://api.bytenite.com/v1';
+const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
+
+// For demo purposes, we'll use a CORS proxy
+// In production, the ByteNite API should be configured to allow your domain
+const getProxiedUrl = (url: string) => {
+    // Only use proxy if we're in production (GitHub Pages)
+    if (window.location.hostname === 'bytenite2.github.io') {
+        return `${CORS_PROXY}${url}`;
+    }
+    return url;
+};
 
 export const fetchAccessToken = async (apiKey: string): Promise<string> => {
-    const response = await axios.post<AccessTokenResponse>(`${BASE_URL}/auth/access_token`, {
-        apiKey: apiKey
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-    });
-    return response.data.token;
+    try {
+        const response = await axios.post<AccessTokenResponse>(
+            getProxiedUrl(`${BASE_URL}/auth/access_token`), 
+            {
+                apiKey: apiKey
+            }, 
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            }
+        );
+        return response.data.token;
+    } catch (error: any) {
+        console.error('Auth error:', error);
+        throw new Error(`Authentication failed: ${error.response?.data?.message || error.message}`);
+    }
 };
 
 export const createJob = async (accessToken: string, prompt: string, numReplicas: number): Promise<CreateJobResponse> => {
-    const response = await axios.post<CreateJobResponse>(`${BASE_URL}/customer/jobs`, {
-        templateId: "img-gen-diffusers-flux-gpu-template",
-        description: "This job generates variations of images out of the same prompt using Flux Schnell.",
-        name: "Job with img-gen-diffusers-flux-gpu-template",
-        params: {
-            partitioner: {
-                num_replicas: numReplicas
-            },
-            assembler: {},
-            app: {
-                prompt: prompt
+    try {
+        const response = await axios.post<CreateJobResponse>(
+            getProxiedUrl(`${BASE_URL}/customer/jobs`), 
+            {
+                templateId: "img-gen-diffusers-flux-gpu-template",
+                description: "This job generates variations of images out of the same prompt using Flux Schnell.",
+                name: "Job with img-gen-diffusers-flux-gpu-template",
+                params: {
+                    partitioner: {
+                        num_replicas: numReplicas
+                    },
+                    assembler: {},
+                    app: {
+                        prompt: prompt
+                    }
+                }
+            }, 
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': accessToken
+                }
             }
-        }
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': accessToken
-        }
-    });
-    return response.data;
+        );
+        return response.data;
+    } catch (error: any) {
+        console.error('Job creation error:', error);
+        throw new Error(`Job creation failed: ${error.response?.data?.message || error.message}`);
+    }
 };
 
 export const runJob = async (accessToken: string, jobId: string): Promise<void> => {
-    await axios.post(`${BASE_URL}/customer/jobs/${jobId}/run`, {
-        config: {
-            taskTimeout: "3600",
-            jobTimeout: "84200",
-            isTestJob: false
-        }
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': accessToken
-        }
-    });
-    
-    // Wait 1 second before polling as specified in requirements
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+        await axios.post(
+            getProxiedUrl(`${BASE_URL}/customer/jobs/${jobId}/run`), 
+            {
+                config: {
+                    taskTimeout: "3600",
+                    jobTimeout: "84200",
+                    isTestJob: false
+                }
+            }, 
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': accessToken
+                }
+            }
+        );
+        
+        // Wait 1 second before polling as specified in requirements
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error: any) {
+        console.error('Job run error:', error);
+        throw new Error(`Job execution failed: ${error.response?.data?.message || error.message}`);
+    }
 };
 
 export const pollResults = async (accessToken: string, jobId: string): Promise<JobResultsResponse['results']> => {
@@ -64,20 +102,24 @@ export const pollResults = async (accessToken: string, jobId: string): Promise<J
 
     while (attempts < maxAttempts) {
         try {
-            const response = await axios.get<JobResultsResponse>(`${BASE_URL}/customer/jobs/${jobId}/results`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': accessToken
+            const response = await axios.get<JobResultsResponse>(
+                getProxiedUrl(`${BASE_URL}/customer/jobs/${jobId}/results`), 
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': accessToken
+                    }
                 }
-            });
+            );
             
             if (response.data.results && response.data.results.length > 0) {
                 return response.data.results;
             }
         } catch (error: any) {
+            console.error(`Polling attempt ${attempts + 1} failed:`, error);
             // If it's a 404 or similar, the job might not be ready yet
             if (error.response?.status !== 404) {
-                throw error;
+                throw new Error(`Polling failed: ${error.response?.data?.message || error.message}`);
             }
         }
         

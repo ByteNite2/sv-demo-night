@@ -12,6 +12,9 @@ const ImageGenerator: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [loadingStatus, setLoadingStatus] = useState('');
 
+    // Check if we're using CORS proxy
+    const isUsingProxy = window.location.hostname === 'bytenite2.github.io';
+
     const handleGenerate = async () => {
         if (!prompt.trim()) {
             setError('Please enter a prompt');
@@ -60,6 +63,13 @@ const ImageGenerator: React.FC = () => {
 
     return (
         <div className="image-generator">
+            {isUsingProxy && (
+                <div className="cors-warning">
+                    <p><strong>⚠️ Demo Mode:</strong> This app uses a CORS proxy for demonstration purposes. 
+                    For production use, ByteNite API should be configured to allow your domain.</p>
+                </div>
+            )}
+            
             <div className="form-container">
                 <div className="input-group">
                     <label htmlFor="prompt">Prompt:</label>
