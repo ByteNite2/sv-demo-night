@@ -65,7 +65,8 @@ const ImageGenerator: React.FC = () => {
         <div className="image-generator">
             {isUsingProxy && (
                 <div className="cors-warning">
-                    <p><strong>⚠️ Demo Mode:</strong> This app uses a CORS proxy for demonstration purposes. 
+                    <p><strong>⚠️ Demo Mode:</strong> This app uses CORS proxies for demonstration purposes. 
+                    If one proxy fails, it will automatically try others. 
                     For production use, ByteNite API should be configured to allow your domain.</p>
                 </div>
             )}

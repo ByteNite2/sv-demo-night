@@ -2,37 +2,67 @@ import axios from 'axios';
 import { AccessTokenResponse, CreateJobResponse, JobResultsResponse } from '../types';
 
 const BASE_URL = 'https://api.bytenite.com/v1';
-const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
+
+// Multiple CORS proxy options
+const CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://thingproxy.freeboard.io/fetch/',
+    'https://proxy.cors.sh/',
+    'https://cors-anywhere.herokuapp.com/'
+];
+
+let currentProxyIndex = 0;
 
 // For demo purposes, we'll use a CORS proxy
 // In production, the ByteNite API should be configured to allow your domain
 const getProxiedUrl = (url: string) => {
     // Only use proxy if we're in production (GitHub Pages)
     if (window.location.hostname === 'bytenite2.github.io') {
-        return `${CORS_PROXY}${url}`;
+        const proxy = CORS_PROXIES[currentProxyIndex];
+        return `${proxy}${encodeURIComponent(url)}`;
     }
     return url;
 };
 
+const tryNextProxy = () => {
+    currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+};
+
 export const fetchAccessToken = async (apiKey: string): Promise<string> => {
-    try {
-        const response = await axios.post<AccessTokenResponse>(
-            getProxiedUrl(`${BASE_URL}/auth/access_token`), 
-            {
-                apiKey: apiKey
-            }, 
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+    const maxRetries = CORS_PROXIES.length;
+    let lastError: any;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const response = await axios.post<AccessTokenResponse>(
+                getProxiedUrl(`${BASE_URL}/auth/access_token`), 
+                {
+                    apiKey: apiKey
+                }, 
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 10000 // 10 second timeout
                 }
+            );
+            return response.data.token;
+        } catch (error: any) {
+            console.error(`Auth error with proxy ${CORS_PROXIES[currentProxyIndex]}:`, error);
+            lastError = error;
+            
+            // If this isn't the last attempt, try next proxy
+            if (attempt < maxRetries - 1) {
+                tryNextProxy();
+                console.log(`Trying next proxy: ${CORS_PROXIES[currentProxyIndex]}`);
+                continue;
             }
-        );
-        return response.data.token;
-    } catch (error: any) {
-        console.error('Auth error:', error);
-        throw new Error(`Authentication failed: ${error.response?.data?.message || error.message}`);
+        }
     }
+    
+    // If all proxies failed, throw the last error
+    throw new Error(`Authentication failed with all CORS proxies. Last error: ${lastError.response?.data?.message || lastError.message}`);
 };
 
 export const createJob = async (accessToken: string, prompt: string, numReplicas: number): Promise<CreateJobResponse> => {
@@ -58,7 +88,8 @@ export const createJob = async (accessToken: string, prompt: string, numReplicas
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'Authorization': accessToken
-                }
+                },
+                timeout: 15000 // 15 second timeout
             }
         );
         return response.data;
@@ -84,7 +115,8 @@ export const runJob = async (accessToken: string, jobId: string): Promise<void> 
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'Authorization': accessToken
-                }
+                },
+                timeout: 15000 // 15 second timeout
             }
         );
         
@@ -108,7 +140,8 @@ export const pollResults = async (accessToken: string, jobId: string): Promise<J
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': accessToken
-                    }
+                    },
+                    timeout: 10000 // 10 second timeout
                 }
             );
             
