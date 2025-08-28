@@ -61,6 +61,58 @@ sv-demo-night
 - A loading spinner will appear while the images are being generated.
 - Once the images are ready, they will be displayed in the gallery.
 
+## Deployment
+
+### Prerequisites
+Make sure you have Node.js installed:
+```bash
+# Install Node.js using Homebrew (macOS)
+brew install node
+
+# Or download from https://nodejs.org/
+```
+
+### Option 1: Vercel (Recommended)
+```bash
+# Install dependencies
+npm install
+
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel
+```
+
+### Option 2: Netlify
+```bash
+# Build the app
+npm run build
+
+# Option A: Drag and drop the 'build' folder to netlify.com
+# Option B: Use Netlify CLI
+npm install -g netlify-cli
+netlify deploy --prod --dir=build
+```
+
+### Option 3: GitHub Pages
+```bash
+# Install dependencies
+npm install
+
+# Deploy to GitHub Pages
+npm run deploy
+```
+
+### Option 4: Traditional Web Server
+```bash
+# Build the app
+npm run build
+
+# The 'build' folder contains static files that can be served by any web server
+# Upload the contents of the 'build' folder to your web server
+```
+
 ## API Endpoints
 - **Get Access Token**: `POST https://api.bytenite.com/v1/auth/access_token`
 - **Create Job**: `POST https://api.bytenite.com/v1/customer/jobs`
