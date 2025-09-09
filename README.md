@@ -4,21 +4,26 @@ A React-based image generation app powered by ByteNite's AI infrastructure, feat
 
 ## 🚀 Live Demo
 
-Visit: [https://bytenite2.github.io/sv-demo-night](https://bytenite2.github.io/sv-demo-night)
+Visit: [https://sv-demo-night-7sd2xyq3a-fabio-caironis-projects.vercel.app](https://sv-demo-night-7sd2xyq3a-fabio-caironis-projects.vercel.app)
 
 ## ✨ Features
 
 - **AI-Powered Image Generation**: Uses ByteNite's FLUX.1-schnell model
 - **Batch Generation**: Create 1-10 image variations from a single prompt
 - **Real-time Progress**: Live status updates during generation
+- **Serverless Architecture**: CORS-free API calls via Vercel functions
+- **Server-side Processing**: Zip extraction and image processing on the backend
 - **Responsive Design**: Works on desktop and mobile devices
 - **Secure API Integration**: Protected API key handling
 
 ## 🛠️ Technology Stack
 
 - **Frontend**: React 17 with TypeScript
+- **Backend**: Vercel Serverless Functions (Node.js)
+- **Deployment**: Vercel Platform
 - **Styling**: Custom CSS with modern animations
 - **HTTP Client**: Axios for API communication
+- **Image Processing**: JSZip for server-side zip extraction
 - **AI Model**: black-forest-labs/FLUX.1-schnell
 - **Infrastructure**: ByteNite platform on NVIDIA A100 40GB
 
@@ -39,13 +44,19 @@ sv-demo-night/
 │   │   ├── LoadingSpinner.tsx  # Loading animation
 │   │   └── ImageGallery.tsx    # Image display grid
 │   ├── services/
-│   │   └── api.ts           # ByteNite API integration
+│   │   └── api.ts           # Vercel API integration
 │   ├── styles/
 │   │   └── App.css          # Application styling
 │   └── types/
 │       └── index.ts         # TypeScript definitions
+├── api/
+│   ├── auth.js              # Authentication endpoint
+│   ├── create-job.js        # Job creation endpoint
+│   ├── run-job.js           # Job execution endpoint
+│   └── get-results.js       # Results & zip extraction endpoint
 ├── package.json
 ├── tsconfig.json
+├── vercel.json              # Vercel configuration
 └── README.md
 ```
 
@@ -95,37 +106,36 @@ sv-demo-night/
 
 ## 🌐 Deployment
 
-### Option 1: GitHub Pages (Recommended)
+This app is deployed on **Vercel** with serverless functions handling ByteNite API integration.
 
-```bash
-# Build and deploy
-npm run deploy
-```
-
-### Option 2: Vercel
+### Deploy to Vercel
 
 ```bash
 # Install Vercel CLI
 npm install -g vercel
 
+# Login to Vercel
+vercel login
+
 # Deploy
-vercel
+vercel --prod
 ```
 
-### Option 3: Netlify
+### Local Development
 
 ```bash
-# Build the app
-npm run build
+# Start development server
+npm start
 
-# Upload the 'build' folder to netlify.com
-```
-
-### Option 4: Traditional Hosting
-
-```bash
 # Build for production
 npm run build
+```
+
+### Environment Requirements
+
+- Node.js 16+ 
+- Vercel account for deployment
+- ByteNite API key
 
 # Upload contents of 'build' folder to your web server
 ```
@@ -196,18 +206,21 @@ Update `src/services/api.ts` to:
 3. **API errors**
    - Verify your API key is correct
    - Check ByteNite service status
-   - Ensure CORS is properly configured
+   - Monitor Vercel function logs for debugging
 
 4. **Deployment issues**
    ```bash
-   # For GitHub Pages
-   git remote -v  # Verify origin is correct
-   npm run deploy
+   # Redeploy to Vercel
+   vercel --prod
+   
+   # Check Vercel logs
+   vercel logs [deployment-url]
    ```
 
 ## 📞 Support
 
 - **ByteNite Documentation**: [docs.bytenite.com](https://docs.bytenite.com)
+- **Vercel Documentation**: [vercel.com/docs](https://vercel.com/docs)
 - **GitHub Issues**: [Create an issue](https://github.com/ByteNite2/sv-demo-night/issues)
 - **ByteNite Support**: [support@bytenite.com](mailto:support@bytenite.com)
 
